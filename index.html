@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d1117">
-  <meta name="description" content="Radar ao vivo para Over 0.5 HT e Over 0.5 FT, com histórico de desempenho do modelo.">
+  <meta name="description" content="Radar ao vivo para 0,5 gol HT e 0,5 gol FT, com histórico de desempenho do modelo.">
   <title>Radar de Gols</title>
   <style>
     :root {
@@ -176,6 +176,7 @@
     .button.primary:hover { background: #55e69b; border-color: #55e69b; }
     .button.ghost { background: transparent; }
     .button:disabled { cursor: not-allowed; opacity: .55; transform: none; }
+    #sortButton { display: none; }
 
     .summary-grid {
       display: grid;
@@ -183,6 +184,7 @@
       gap: 10px;
       margin-bottom: 16px;
     }
+    .live-summary { display: none; }
     .summary-card {
       min-height: 82px;
       padding: 14px 15px;
@@ -199,7 +201,7 @@
     .control-row {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-start;
       gap: 12px;
       padding: 10px;
       margin-bottom: 13px;
@@ -221,13 +223,13 @@
     }
     .segmented button.active { background: var(--surface-3); color: var(--text); }
 
-    .tiny-status { color: var(--muted); font-size: .78rem; }
+    .tiny-status { display: none; }
     .list { display: grid; gap: 10px; }
 
     .match-card {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 310px;
-      min-height: 154px;
+      grid-template-columns: minmax(0, 1fr) 250px;
+      min-height: 124px;
       overflow: hidden;
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -236,7 +238,7 @@
     }
     .match-card.actionable { border-color: rgba(61, 222, 139, .42); }
 
-    .match-info { padding: 17px 18px; min-width: 0; }
+    .match-info { padding: 15px 17px; min-width: 0; }
     .match-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; color: var(--muted); font-size: .77rem; }
     .minute {
       display: inline-flex;
@@ -258,16 +260,16 @@
 
     .analysis-panel {
       border-left: 1px solid var(--line);
-      padding: 15px 17px;
+      padding: 14px 16px;
       background: rgba(23, 29, 37, .68);
       display: flex;
       flex-direction: column;
       justify-content: center;
       min-width: 0;
     }
-    .analysis-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-    .market-label { color: var(--muted); font-size: .77rem; font-weight: 760; text-transform: uppercase; letter-spacing: .045em; }
-    .probability { margin-top: 3px; font-size: 2rem; line-height: 1; font-weight: 920; letter-spacing: -.055em; }
+    .analysis-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .market-label { color: var(--muted); font-size: .78rem; font-weight: 760; text-transform: none; letter-spacing: 0; }
+    .probability { margin-top: 4px; font-size: 2.25rem; line-height: 1; font-weight: 920; letter-spacing: 0; }
     .probability.strong { color: var(--green); }
     .probability.valid { color: #7be6aa; }
     .probability.watch { color: var(--yellow); }
@@ -297,6 +299,17 @@
     .quality-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
     .quality-dot.low { background: var(--yellow); }
     .quality-dot.bad { background: var(--red); }
+    .analysis-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .analysis-tile {
+      min-width: 0;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(9, 12, 16, .35);
+    }
+    .analysis-tile.entry { border-color: rgba(61, 222, 139, .45); background: var(--green-soft); }
+    .analysis-tile .probability { font-size: 1.8rem; }
+    .analysis-tile .analysis-note { margin-top: 5px; min-height: auto; }
 
     .skeleton { overflow: hidden; position: relative; border-radius: 6px; background: #242c36; }
     .skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent); animation: shimmer 1.35s infinite; }
@@ -464,7 +477,7 @@
         </div>
       </div>
 
-      <div class="summary-grid" aria-label="Resumo ao vivo">
+      <div class="summary-grid live-summary" aria-label="Resumo ao vivo">
         <div class="summary-card"><div class="summary-label">Jogos ao vivo</div><div class="summary-value" id="liveCount">0</div></div>
         <div class="summary-card"><div class="summary-label">Sinais HT ≥ 65%</div><div class="summary-value green" id="htSignalCount">0</div></div>
         <div class="summary-card"><div class="summary-label">Sinais FT ≥ 65%</div><div class="summary-value green" id="ftSignalCount">0</div></div>
@@ -499,8 +512,8 @@
           <label for="marketFilter">Mercado</label>
           <select id="marketFilter">
             <option value="ALL">HT + FT</option>
-            <option value="HT">Over 0.5 HT</option>
-            <option value="FT">Over 0.5 FT após 70′</option>
+            <option value="HT">0,5 gol HT</option>
+            <option value="FT">0,5 gol FT após 70′</option>
           </select>
         </div>
         <div class="field">
@@ -613,6 +626,7 @@
     const THRESHOLDS = Array.from({ length: 11 }, (_, index) => 50 + index * 5);
     const TARGET_SAMPLE = 10;
     const HISTORY_LIMIT = 15;
+    const FREE_HISTORY_SEASONS = [2024, 2023, 2022];
     const API_GAP_MS = 6500;
     const CACHE_TTL_MS = 18 * 60 * 60 * 1000;
     const STATS_CACHE_TTL_MS = 4 * 60 * 1000;
@@ -785,12 +799,12 @@
         if (!response.ok) throw new Error(`API-Football respondeu ${response.status}.`);
 
         const apiErrors = normalizeApiErrors(payload?.errors);
-        if (apiErrors) throw new Error(apiErrors);
+        if (apiErrors) throw new Error(translateApiMessage(apiErrors));
 
         setConnection("ok", state.apiRemaining === null ? "API conectada" : `API conectada • ${state.apiRemaining} restantes`);
         return Array.isArray(payload?.response) ? payload.response : [];
       } catch (error) {
-        const message = error.name === "AbortError" ? "A API demorou demais para responder." : error.message;
+        const message = error.name === "AbortError" ? "A API demorou demais para responder." : translateApiMessage(error.message);
         setConnection("error", "Falha na API");
         throw new Error(message);
       } finally {
@@ -803,6 +817,17 @@
       if (Array.isArray(errors)) return errors.filter(Boolean).join(" • ");
       if (typeof errors === "object") return Object.values(errors).filter(Boolean).join(" • ");
       return String(errors);
+    }
+
+    function translateApiMessage(message) {
+      const text = String(message || "");
+      const lower = text.toLowerCase();
+      if (lower.includes("free plans") && lower.includes("season")) return "Seu plano da API não libera essa temporada. A análise vai usar temporadas liberadas e cálculo base.";
+      if (lower.includes("free plans") && lower.includes("last")) return "Seu plano da API não libera busca por últimos jogos. A análise vai usar outro filtro.";
+      if (lower.includes("daily request limit") || lower.includes("rate limit")) return "Limite de requisições da API atingido.";
+      if (lower.includes("invalid api key") || lower.includes("token")) return "Chave da API inválida.";
+      if (lower.includes("failed to fetch") || lower.includes("network")) return "Não foi possível consultar a API agora.";
+      return text || "A API retornou um erro.";
     }
 
     function setConnection(mode, label) {
@@ -884,7 +909,11 @@
       return ["1H", "HT", "2H", "ET", "BT", "P", "INT", "LIVE"].includes(status);
     }
 
-    function marketDescriptor(fixture) {
+    function marketDescriptors(fixture) {
+      return ["HT", "FT"].map(market => marketDescriptor(fixture, market));
+    }
+
+    function marketDescriptor(fixture, market) {
       const status = fixture?.fixture?.status?.short;
       const minute = fixtureMinute(fixture);
       const goals = currentGoals(fixture);
@@ -893,34 +922,47 @@
       const measuredHalfTotal = totalScore(half);
       const halfTotal = measuredHalfTotal ?? (currentTotal === 0 ? 0 : null);
       const zeroScore = currentTotal === 0;
+      const firstHalf = status === "1H" || (status === "LIVE" && minute < 45);
+      const secondHalf = ["HT", "2H", "INT", "ET", "BT", "P"].includes(status) || (status === "LIVE" && minute >= 45);
 
-      if (status === "1H" || (status === "LIVE" && minute < 45)) {
+      if (market === "HT") {
+        const resolvedProbability = !firstHalf && measuredHalfTotal !== null ? (measuredHalfTotal > 0 ? 100 : 0) : null;
         return {
           market: "HT",
-          eligible: zeroScore && minute >= 20,
+          eligible: firstHalf && zeroScore && minute >= 20,
           prefetch: true,
-          minute,
-          reason: zeroScore
-            ? minute >= 20 ? "Jogo 0–0 com janela HT aberta." : "Potencial HT calculado desde o início. Entrada 0–0 após 20′."
-            : "Jogo com gol, mas o potencial HT continua visível."
+          resolvedProbability,
+          resolvedNote: resolvedProbability === null ? "" : resolvedProbability === 100 ? "Gol no HT" : "Sem gol no HT",
+          minute: firstHalf ? minute : 0,
+          reason: firstHalf
+            ? zeroScore
+              ? minute >= 20 ? "Entrada 0–0 aberta." : "Acompanhando desde o início."
+              : "Leitura mesmo com gol."
+            : "Primeiro tempo já passou."
         };
       }
 
-      if (["HT", "2H", "INT", "LIVE", "ET", "BT", "P"].includes(status)) {
-        const analysisMinute = status === "HT" ? 45 : Math.max(minute, 45);
+      if (market === "FT") {
+        const analysisMinute = secondHalf ? status === "HT" ? 45 : Math.max(minute, 45) : 45;
         const zeroAtHalf = halfTotal === 0 || (halfTotal === null && zeroScore);
+        const secondHalfGoals = secondHalf && halfTotal !== null && currentTotal !== null ? Math.max(0, currentTotal - halfTotal) : null;
+        const resolvedProbability = secondHalfGoals !== null && secondHalfGoals > 0 ? 100 : null;
         return {
           market: "FT",
-          eligible: zeroScore && zeroAtHalf && analysisMinute >= 70,
+          eligible: secondHalf && zeroScore && zeroAtHalf && analysisMinute >= 70,
           prefetch: true,
+          resolvedProbability,
+          resolvedNote: resolvedProbability === 100 ? "Gol no 2º tempo" : "",
           minute: analysisMinute,
-          reason: zeroScore
-            ? analysisMinute >= 70 && zeroAtHalf ? "Jogo 0–0 com janela FT aberta." : "Potencial do segundo tempo calculado. Entrada 0–0 após 70′."
-            : "Jogo com gol, mas o potencial FT continua visível."
+          reason: secondHalf
+            ? zeroScore
+              ? analysisMinute >= 70 && zeroAtHalf ? "Entrada 0–0 aberta." : "Acompanhando até 70′."
+              : "Leitura mesmo com gol."
+            : "Segundo tempo ainda não começou."
         };
       }
 
-      return { market: null, reason: "Partida fora das janelas do modelo." };
+      return { market: null, reason: "Sem leitura para este mercado." };
     }
 
     function analysisKey(fixtureId, market) {
@@ -960,8 +1002,8 @@
 
     function planAnalyses() {
       const candidates = state.liveFixtures
-        .map(fixture => ({ fixture, descriptor: marketDescriptor(fixture) }))
-        .filter(item => item.descriptor.market)
+        .flatMap(fixture => marketDescriptors(fixture).map(descriptor => ({ fixture, descriptor })))
+        .filter(item => item.descriptor.resolvedProbability === null || item.descriptor.resolvedProbability === undefined)
         .sort((a, b) => Number(b.descriptor.eligible) - Number(a.descriptor.eligible) || b.descriptor.minute - a.descriptor.minute);
 
       candidates.forEach(({ fixture, descriptor }) => analyzeFixture(fixture, descriptor));
@@ -978,10 +1020,9 @@
       try {
         const homeTeamId = fixture.teams.home.id;
         const awayTeamId = fixture.teams.away.id;
-        const season = fixture.league.season || new Date().getFullYear();
         const [homeHistory, awayHistory] = await Promise.all([
-          getTeamHistory(homeTeamId, season),
-          getTeamHistory(awayTeamId, season)
+          getTeamHistory(homeTeamId),
+          getTeamHistory(awayTeamId)
         ]);
 
         let liveStats = null;
@@ -996,28 +1037,42 @@
           await recordCandidate(fixture, descriptor, analysis);
         }
       } catch (error) {
-        state.analyses.set(key, { available: false, error: error.message, quality: "bad" });
+        const analysis = calculateProbability(fixture, descriptor, [], [], null);
+        state.analyses.set(key, { ...analysis, fallback: true, error: translateApiMessage(error.message) });
       } finally {
         state.analysisLoading.delete(key);
         renderLive();
       }
     }
 
-    async function getTeamHistory(teamId, season) {
-      const historySeason = numeric(season, new Date().getFullYear());
-      const cacheKey = `${STORAGE.teamPrefix}${teamId}:${historySeason}`;
+    async function getTeamHistory(teamId) {
+      const cacheKey = `${STORAGE.teamPrefix}${teamId}:gratis`;
       const cached = readCache(cacheKey, CACHE_TTL_MS);
       if (cached) return cached;
       if (state.teamPromises.has(cacheKey)) return state.teamPromises.get(cacheKey);
 
-      const promise = apiQueue.enqueue("/fixtures", { team: teamId, season: historySeason, status: "FT", timezone: "America/Sao_Paulo" }, 30)
-        .then(fixtures => fixtures.map(normalizeHistoricalFixture).filter(Boolean).sort((a, b) => b.timestamp - a.timestamp))
-        .then(normalized => normalized.slice(0, HISTORY_LIMIT))
-        .then(normalized => {
-          writeCache(cacheKey, normalized);
-          return normalized;
-        })
-        .finally(() => state.teamPromises.delete(cacheKey));
+      const promise = (async () => {
+        const allRows = [];
+        for (const season of FREE_HISTORY_SEASONS) {
+          try {
+            const fixtures = await apiQueue.enqueue("/fixtures", { team: teamId, season, status: "FT", timezone: "America/Sao_Paulo" }, 30);
+            allRows.push(...fixtures.map(normalizeHistoricalFixture).filter(Boolean));
+            if (allRows.length >= HISTORY_LIMIT) break;
+          } catch (error) {
+            const message = translateApiMessage(error.message);
+            console.warn("Histórico ignorado:", message);
+            if (message.includes("plano da API")) {
+              setConnection("ok", state.apiRemaining === null ? "API conectada" : `API conectada • ${state.apiRemaining} restantes`);
+            }
+          }
+        }
+
+        const normalized = dedupeRows(allRows)
+          .sort((a, b) => b.timestamp - a.timestamp)
+          .slice(0, HISTORY_LIMIT);
+        writeCache(cacheKey, normalized);
+        return normalized;
+      })().finally(() => state.teamPromises.delete(cacheKey));
 
       state.teamPromises.set(cacheKey, promise);
       return promise;
@@ -1078,6 +1133,14 @@
       });
 
       return { ...totals, available: coverage > 0 };
+    }
+
+    function baseProbability(descriptor) {
+      const prior = descriptor.market === "HT" ? 0.69 : 0.79;
+      const endMinute = descriptor.market === "HT" ? 47 : 96;
+      const startMinute = descriptor.market === "HT" ? 0 : 45;
+      const remainingFraction = clamp((endMinute - descriptor.minute) / (endMinute - startMinute), 0.015, 1);
+      return Math.round(clamp((1 - Math.pow(1 - prior, remainingFraction)) * 100, 5, 96));
     }
 
     function calculateProbability(fixture, descriptor, homeRows, awayRows, liveStats) {
@@ -1468,16 +1531,14 @@
       const filtered = fixtures.filter(fixture => {
         if (state.liveFilter === "zero") return totalScore(currentGoals(fixture)) === 0;
         if (state.liveFilter === "targets") {
-          const descriptor = marketDescriptor(fixture);
-          return descriptor.eligible;
+          return marketDescriptors(fixture).some(descriptor => descriptor.eligible);
         }
         return true;
       });
 
       elements.liveCount.textContent = String(fixtures.length);
       const currentAnalysisKeys = new Set(fixtures
-        .map(fixture => ({ fixture, descriptor: marketDescriptor(fixture) }))
-        .filter(item => item.descriptor.market)
+        .flatMap(fixture => marketDescriptors(fixture).map(descriptor => ({ fixture, descriptor })))
         .map(item => analysisKey(item.fixture.fixture.id, item.descriptor.market)));
       const validAnalyses = [...state.analyses.entries()].filter(([key, analysis]) => currentAnalysisKeys.has(key) && analysis.available && analysis.probability >= 65);
       elements.htSignalCount.textContent = String(validAnalyses.filter(([key]) => key.endsWith(":HT")).length);
@@ -1500,15 +1561,15 @@
 
     function renderMatchCard(fixture) {
       const fixtureId = fixture.fixture.id;
-      const descriptor = marketDescriptor(fixture);
-      const key = descriptor.market ? analysisKey(fixtureId, descriptor.market) : null;
-      const analysis = key ? state.analyses.get(key) : null;
-      const loading = key ? state.analysisLoading.has(key) : false;
+      const descriptors = marketDescriptors(fixture);
       const goals = currentGoals(fixture);
       const minute = fixtureMinute(fixture);
       const status = fixture.fixture.status.short;
       const minuteLabel = status === "HT" ? "Intervalo" : `${minute}′`;
-      const actionable = descriptor.eligible && analysis?.available && analysis.probability >= 65;
+      const actionable = descriptors.some(descriptor => {
+        const analysis = state.analyses.get(analysisKey(fixtureId, descriptor.market));
+        return descriptor.eligible && analysis?.available && analysis.probability >= 65;
+      });
 
       return `
         <article class="match-card ${actionable ? "actionable" : ""}">
@@ -1524,7 +1585,7 @@
             </div>
           </div>
           <div class="analysis-panel">
-            ${renderAnalysisPanel(descriptor, analysis, loading)}
+            ${renderAnalysisPanel(fixtureId, descriptors)}
           </div>
         </article>`;
     }
@@ -1536,48 +1597,38 @@
       return `<div class="team-row">${logo}<span class="team-name">${escapeHtml(team.name)}</span><strong class="team-score">${escapeHtml(score)}</strong></div>`;
     }
 
-    function renderAnalysisPanel(descriptor, analysis, loading) {
-      const marketLabel = descriptor.market === "HT" ? "Over 0.5 HT • gol até o intervalo" : descriptor.market === "FT" ? "Over 0.5 FT • gol no segundo tempo" : "Análise";
+    function renderAnalysisPanel(fixtureId, descriptors) {
+      return `<div class="analysis-grid">${descriptors.map(descriptor => renderProbabilityTile(fixtureId, descriptor)).join("")}</div>`;
+    }
 
-      if (!descriptor.market) {
-        return `<div class="analysis-top"><div><div class="market-label">Fora do modelo</div><div class="probability unavailable">—</div></div><span class="signal red">Sem entrada</span></div><div class="analysis-note">${escapeHtml(descriptor.reason)}</div>`;
-      }
-
-      if (!descriptor.prefetch) {
-        return `<div class="analysis-top"><div><div class="market-label">${marketLabel}</div><div class="probability unavailable">—</div></div><span class="signal blue">Aguardando</span></div><div class="analysis-note">${escapeHtml(descriptor.reason)}</div>`;
-      }
-
-      if (loading && !analysis) {
-        return `<div class="market-label">${marketLabel}</div><div class="skeleton big"></div><div class="skeleton line"></div>`;
-      }
-
-      if (!analysis?.available) {
-        const message = analysis?.error || "Preparando análise…";
-        const sample = analysis?.sampleHome !== undefined ? `<div class="quality-line"><span class="quality-dot bad"></span>Base ${analysis.sampleHome}/${analysis.sampleAway} jogos</div>` : "";
-        return `<div class="analysis-top"><div><div class="market-label">${marketLabel}</div><div class="probability unavailable">—</div></div><span class="signal red">Sem indicação</span></div><div class="analysis-note">${escapeHtml(message)}</div>${sample}`;
-      }
-
-      const probabilityClass = analysis.probability >= 80 ? "strong" : analysis.probability >= 65 ? "valid" : analysis.probability >= 50 ? "watch" : "weak";
-      const signal = !descriptor.eligible
-        ? { label: "Leitura", className: "blue" }
-        : analysis.probability >= 65
-          ? { label: "Sinal válido", className: "green" }
-          : analysis.probability >= 50
-            ? { label: "Observação", className: "yellow" }
-            : { label: "Fora do corte", className: "red" };
-      const qualityClass = analysis.quality === "low" ? "low" : "";
-      const qualityText = analysis.quality === "low"
-        ? `${analysis.earlySeason ? "Início de temporada" : "Amostra baixa"} • base ${analysis.sampleHome}/${analysis.sampleAway}`
-        : `Base ${analysis.sampleHome}/${analysis.sampleAway} • liga atual ${analysis.sameCompetitionHome}/${analysis.sameCompetitionAway}`;
-      const liveText = analysis.liveStatsUsed ? " • pressão ao vivo incluída" : " • somente histórico";
+    function renderProbabilityTile(fixtureId, descriptor) {
+      const key = analysisKey(fixtureId, descriptor.market);
+      const analysis = state.analyses.get(key);
+      const loading = state.analysisLoading.has(key);
+      const marketLabel = descriptor.market === "HT" ? "HT • gol no 1º tempo" : "FT • gol até o fim";
+      const resolved = descriptor.resolvedProbability !== null && descriptor.resolvedProbability !== undefined;
+      const currentAnalysis = resolved
+        ? { probability: descriptor.resolvedProbability, quality: "good" }
+        : analysis?.available
+          ? analysis
+          : { probability: baseProbability(descriptor), quality: "low", fallback: true };
+      const probabilityClass = currentAnalysis.probability >= 80 ? "strong" : currentAnalysis.probability >= 65 ? "valid" : currentAnalysis.probability >= 50 ? "watch" : "weak";
+      const note = resolved
+        ? descriptor.resolvedNote
+        : descriptor.eligible
+          ? "Entrada 0–0"
+          : loading && !analysis
+            ? "Atualizando"
+            : currentAnalysis.fallback
+              ? "Leitura base"
+              : "Leitura";
 
       return `
-        <div class="analysis-top">
-          <div><div class="market-label">${marketLabel}</div><div class="probability ${probabilityClass}">${analysis.probability}%</div></div>
-          <span class="signal ${signal.className}">${signal.label}</span>
-        </div>
-        <div class="analysis-note">${escapeHtml(descriptor.reason)}${escapeHtml(liveText)}</div>
-        <div class="quality-line"><span class="quality-dot ${qualityClass}"></span>${escapeHtml(qualityText)}</div>`;
+        <div class="analysis-tile ${descriptor.eligible ? "entry" : ""}">
+          <div class="market-label">${marketLabel}</div>
+          <div class="probability ${probabilityClass}">${currentAnalysis.probability}%</div>
+          <div class="analysis-note">${escapeHtml(note)}</div>
+        </div>`;
     }
 
     function renderMissingKey() {
@@ -1631,7 +1682,7 @@
       return `
         <tr>
           <td data-label="Jogo"><div class="history-game"><strong>${escapeHtml(record.homeTeam)} × ${escapeHtml(record.awayTeam)}</strong><span>${escapeHtml(formatDateTime(record.entryAtMs))} • ${escapeHtml(record.league || "")}</span></div></td>
-          <td data-label="Mercado">${record.market === "HT" ? "Over 0.5 HT" : "Over 0.5 FT"}</td>
+          <td data-label="Mercado">${record.market === "HT" ? "0,5 gol HT" : "0,5 gol FT"}</td>
           <td data-label="Entrada">${escapeHtml(crossingMinute)}′ • ${escapeHtml(crossingProbability)}%</td>
           <td data-label="Máxima"><strong>${escapeHtml(record.maxProbability)}%</strong></td>
           <td data-label="Amostra"><span class="confidence ${record.sampleQuality === "low" ? "low" : ""}">${qualityLabel}<br>${escapeHtml(record.sampleHome)}/${escapeHtml(record.sampleAway)} jogos</span></td>
