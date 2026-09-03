@@ -1,0 +1,1809 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d1117">
+  <meta name="description" content="Radar ao vivo para Over 0.5 HT e Over 0.5 FT, com histórico de desempenho do modelo.">
+  <title>Radar de Gols</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #090c10;
+      --surface: #11161d;
+      --surface-2: #171d25;
+      --surface-3: #1c2430;
+      --line: #28313d;
+      --text: #f4f7fa;
+      --muted: #909ba8;
+      --green: #3dde8b;
+      --green-deep: #12a964;
+      --green-soft: rgba(61, 222, 139, .13);
+      --yellow: #f4c451;
+      --yellow-soft: rgba(244, 196, 81, .13);
+      --red: #ff6b73;
+      --red-soft: rgba(255, 107, 115, .12);
+      --blue: #74a7ff;
+      --blue-soft: rgba(116, 167, 255, .12);
+      --shadow: 0 18px 50px rgba(0, 0, 0, .26);
+      --radius: 15px;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { min-height: 100%; background: var(--bg); }
+
+    body {
+      min-height: 100%;
+      margin: 0;
+      background:
+        radial-gradient(circle at 15% -10%, rgba(61, 222, 139, .08), transparent 28rem),
+        var(--bg);
+      color: var(--text);
+      font: 16px/1.45 Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, select { font: inherit; }
+    button, select { -webkit-tap-highlight-color: transparent; }
+    button { color: inherit; }
+    [hidden] { display: none !important; }
+
+    .shell { width: min(1120px, 100%); margin: 0 auto; padding: 0 20px 48px; }
+
+    .topbar {
+      position: sticky;
+      z-index: 20;
+      top: 0;
+      border-bottom: 1px solid rgba(40, 49, 61, .72);
+      background: rgba(9, 12, 16, .88);
+      backdrop-filter: blur(18px);
+    }
+
+    .topbar-inner {
+      width: min(1120px, 100%);
+      min-height: 68px;
+      margin: 0 auto;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: var(--green);
+      color: #062615;
+      font-weight: 950;
+      letter-spacing: -.06em;
+      box-shadow: 0 0 0 5px rgba(61, 222, 139, .08);
+    }
+    .brand-name { font-size: 1.06rem; font-weight: 800; letter-spacing: -.025em; white-space: nowrap; }
+    .brand-name span { color: var(--green); }
+
+    .top-actions { display: flex; align-items: center; gap: 9px; }
+
+    .connection {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--muted);
+      font-size: .82rem;
+      white-space: nowrap;
+    }
+    .connection-dot { width: 7px; height: 7px; border-radius: 50%; background: #5c6570; }
+    .connection-dot.ok { background: var(--green); box-shadow: 0 0 0 4px rgba(61, 222, 139, .1); }
+    .connection-dot.busy { background: var(--yellow); animation: pulse 1.2s infinite; }
+    .connection-dot.error { background: var(--red); }
+    @keyframes pulse { 50% { opacity: .42; } }
+
+    .icon-button, .button, .segmented button, .tab-button {
+      border: 1px solid var(--line);
+      background: var(--surface-2);
+      cursor: pointer;
+      transition: border-color .15s ease, background .15s ease, transform .15s ease;
+    }
+    .icon-button:hover, .button:hover, .segmented button:hover { border-color: #3c4858; background: #1c242e; }
+    .icon-button:active, .button:active { transform: translateY(1px); }
+    .icon-button:focus-visible, .button:focus-visible, .tab-button:focus-visible, select:focus-visible, input:focus-visible {
+      outline: 2px solid var(--blue);
+      outline-offset: 2px;
+    }
+
+    .icon-button {
+      width: 39px;
+      height: 39px;
+      display: grid;
+      place-items: center;
+      border-radius: 11px;
+      font-size: 1.05rem;
+    }
+
+    .tabs {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      gap: 24px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .tab-button {
+      position: relative;
+      padding: 15px 1px 13px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: .92rem;
+      font-weight: 720;
+    }
+    .tab-button.active { color: var(--text); }
+    .tab-button.active::after {
+      content: "";
+      position: absolute;
+      height: 2px;
+      right: 0;
+      bottom: -1px;
+      left: 0;
+      border-radius: 2px;
+      background: var(--green);
+    }
+
+    .view { padding-top: 26px; }
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+    .page-head h1 { margin: 0; font-size: clamp(1.35rem, 3vw, 1.8rem); line-height: 1.1; letter-spacing: -.04em; }
+    .page-head p { margin: 7px 0 0; color: var(--muted); font-size: .88rem; }
+    .page-actions { display: flex; align-items: center; justify-content: flex-end; gap: 9px; flex-wrap: wrap; }
+
+    .button {
+      min-height: 40px;
+      padding: 8px 13px;
+      border-radius: 11px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 720;
+      font-size: .87rem;
+    }
+    .button.primary { border-color: var(--green); background: var(--green); color: #062615; }
+    .button.primary:hover { background: #55e69b; border-color: #55e69b; }
+    .button.ghost { background: transparent; }
+    .button:disabled { cursor: not-allowed; opacity: .55; transform: none; }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .summary-card {
+      min-height: 82px;
+      padding: 14px 15px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: rgba(17, 22, 29, .76);
+    }
+    .summary-label { color: var(--muted); font-size: .78rem; font-weight: 650; }
+    .summary-value { margin-top: 5px; font-size: 1.35rem; font-weight: 850; letter-spacing: -.035em; }
+    .summary-value.green { color: var(--green); }
+    .summary-value.red { color: var(--red); }
+    .summary-value.yellow { color: var(--yellow); }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px;
+      margin-bottom: 13px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--surface);
+    }
+
+    .segmented { display: inline-flex; gap: 4px; padding: 3px; border-radius: 10px; background: var(--bg); }
+    .segmented button {
+      min-height: 33px;
+      padding: 5px 10px;
+      border-color: transparent;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      font-size: .8rem;
+      font-weight: 700;
+    }
+    .segmented button.active { background: var(--surface-3); color: var(--text); }
+
+    .tiny-status { color: var(--muted); font-size: .78rem; }
+    .list { display: grid; gap: 10px; }
+
+    .match-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 310px;
+      min-height: 154px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 1px 0 rgba(255, 255, 255, .015);
+    }
+    .match-card.actionable { border-color: rgba(61, 222, 139, .42); }
+
+    .match-info { padding: 17px 18px; min-width: 0; }
+    .match-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; color: var(--muted); font-size: .77rem; }
+    .minute {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text);
+      font-weight: 800;
+    }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 4px rgba(255, 107, 115, .08); }
+    .meta-separator { color: #4a5562; }
+    .league { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .scoreboard { margin-top: 15px; display: grid; gap: 9px; }
+    .team-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) 34px; align-items: center; gap: 9px; }
+    .team-logo { width: 26px; height: 26px; object-fit: contain; border-radius: 50%; background: rgba(255,255,255,.04); }
+    .team-logo-fallback { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-3); color: var(--muted); font-size: .68rem; font-weight: 800; }
+    .team-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 690; }
+    .team-score { text-align: right; font-size: 1.18rem; font-weight: 900; }
+
+    .analysis-panel {
+      border-left: 1px solid var(--line);
+      padding: 15px 17px;
+      background: rgba(23, 29, 37, .68);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-width: 0;
+    }
+    .analysis-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .market-label { color: var(--muted); font-size: .77rem; font-weight: 760; text-transform: uppercase; letter-spacing: .045em; }
+    .probability { margin-top: 3px; font-size: 2rem; line-height: 1; font-weight: 920; letter-spacing: -.055em; }
+    .probability.strong { color: var(--green); }
+    .probability.valid { color: #7be6aa; }
+    .probability.watch { color: var(--yellow); }
+    .probability.weak { color: var(--red); }
+    .probability.unavailable { color: var(--muted); }
+
+    .signal {
+      flex: none;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 8px;
+      color: var(--muted);
+      font-size: .66rem;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      white-space: nowrap;
+    }
+    .signal.green { border-color: rgba(61, 222, 139, .4); background: var(--green-soft); color: var(--green); }
+    .signal.yellow { border-color: rgba(244, 196, 81, .36); background: var(--yellow-soft); color: var(--yellow); }
+    .signal.red { border-color: rgba(255, 107, 115, .34); background: var(--red-soft); color: var(--red); }
+    .signal.blue { border-color: rgba(116, 167, 255, .34); background: var(--blue-soft); color: var(--blue); }
+
+    .analysis-note { min-height: 18px; margin-top: 8px; color: var(--muted); font-size: .76rem; }
+    .analysis-note b { color: #cbd4de; }
+    .quality-line { display: flex; align-items: center; gap: 7px; margin-top: 8px; color: var(--muted); font-size: .7rem; }
+    .quality-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+    .quality-dot.low { background: var(--yellow); }
+    .quality-dot.bad { background: var(--red); }
+
+    .skeleton { overflow: hidden; position: relative; border-radius: 6px; background: #242c36; }
+    .skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent); animation: shimmer 1.35s infinite; }
+    @keyframes shimmer { to { transform: translateX(100%); } }
+    .skeleton.big { width: 76px; height: 31px; margin-top: 5px; }
+    .skeleton.line { width: 88%; height: 10px; margin-top: 11px; }
+
+    .empty-state {
+      padding: 42px 22px;
+      border: 1px dashed #303a47;
+      border-radius: var(--radius);
+      background: rgba(17, 22, 29, .55);
+      text-align: center;
+    }
+    .empty-state strong { display: block; font-size: 1rem; }
+    .empty-state p { max-width: 500px; margin: 8px auto 18px; color: var(--muted); font-size: .86rem; }
+
+    .history-toolbar {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1.35fr 1.25fr;
+      gap: 10px;
+      padding: 12px;
+      margin-bottom: 14px;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--surface);
+    }
+    .field { display: grid; gap: 6px; }
+    .field label { color: var(--muted); font-size: .72rem; font-weight: 720; }
+    .field select, .field input {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface-2);
+      color: var(--text);
+      padding: 8px 10px;
+    }
+    .date-range { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .quick-dates { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+    .quick-dates button {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface-2);
+      color: var(--text);
+      font-size: .78rem;
+      font-weight: 720;
+      cursor: pointer;
+    }
+
+    .table-wrap { overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px 13px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+    th { color: var(--muted); background: rgba(23, 29, 37, .8); font-size: .72rem; letter-spacing: .035em; text-transform: uppercase; }
+    td { font-size: .82rem; }
+    tr:last-child td { border-bottom: 0; }
+    .history-game { max-width: 300px; }
+    .history-game strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .history-game span { display: block; margin-top: 2px; color: var(--muted); font-size: .72rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .result-badge { display: inline-flex; min-width: 67px; justify-content: center; padding: 5px 8px; border-radius: 999px; font-size: .7rem; font-weight: 880; text-transform: uppercase; }
+    .result-badge.green { color: var(--green); background: var(--green-soft); }
+    .result-badge.red { color: var(--red); background: var(--red-soft); }
+    .result-badge.pending { color: var(--yellow); background: var(--yellow-soft); }
+    .confidence { color: var(--muted); font-size: .72rem; }
+    .confidence.low { color: var(--yellow); }
+
+    dialog {
+      width: min(530px, calc(100% - 26px));
+      max-height: calc(100dvh - 30px);
+      margin: auto;
+      overflow: auto;
+      border: 1px solid #34404e;
+      border-radius: 18px;
+      padding: 0;
+      background: var(--surface);
+      color: var(--text);
+      box-shadow: var(--shadow);
+    }
+    dialog::backdrop { background: rgba(0, 0, 0, .68); backdrop-filter: blur(4px); }
+    .dialog-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 18px 19px 14px; border-bottom: 1px solid var(--line); }
+    .dialog-head h2 { margin: 0; font-size: 1.08rem; letter-spacing: -.025em; }
+    .dialog-body { padding: 18px 19px; }
+    .dialog-body p { margin: 0 0 16px; color: var(--muted); font-size: .83rem; }
+    .dialog-grid { display: grid; gap: 14px; }
+    .check-row { display: flex; align-items: flex-start; gap: 10px; color: #cbd4de; font-size: .82rem; }
+    .check-row input { width: 18px; height: 18px; accent-color: var(--green); }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 9px; padding: 14px 19px 18px; }
+    .security-note { margin-top: 13px !important; padding: 11px 12px; border: 1px solid rgba(116,167,255,.24); border-radius: 10px; background: var(--blue-soft); color: #b8cff7 !important; }
+
+    .toast-stack { position: fixed; z-index: 50; right: 18px; bottom: 18px; width: min(360px, calc(100% - 36px)); display: grid; gap: 8px; }
+    .toast { padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: #18202a; box-shadow: var(--shadow); font-size: .82rem; animation: toast-in .18s ease-out; }
+    .toast.error { border-color: rgba(255, 107, 115, .45); }
+    .toast.success { border-color: rgba(61, 222, 139, .42); }
+    @keyframes toast-in { from { transform: translateY(8px); opacity: 0; } }
+
+    @media (max-width: 780px) {
+      .shell { padding-right: 13px; padding-left: 13px; }
+      .topbar-inner, .tabs { padding-right: 13px; padding-left: 13px; }
+      .connection-label { display: none; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .match-card { grid-template-columns: 1fr; }
+      .analysis-panel { border-top: 1px solid var(--line); border-left: 0; }
+      .history-toolbar { grid-template-columns: 1fr; }
+      .table-wrap { border: 0; background: transparent; overflow: visible; }
+      table, tbody { display: block; }
+      thead { display: none; }
+      tr { display: grid; grid-template-columns: 1fr auto; gap: 9px 12px; padding: 14px; margin-bottom: 9px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface); }
+      td { display: block; padding: 0; border: 0; }
+      td::before { content: attr(data-label); display: block; margin-bottom: 2px; color: var(--muted); font-size: .65rem; font-weight: 750; text-transform: uppercase; }
+      td:first-child { grid-column: 1 / -1; }
+      .history-game { max-width: none; }
+    }
+
+    @media (max-width: 560px) {
+      .shell { padding-bottom: 30px; }
+      .page-head { align-items: stretch; flex-direction: column; }
+      .page-actions { justify-content: flex-start; }
+      .control-row { align-items: stretch; flex-direction: column; }
+      .segmented { width: 100%; }
+      .segmented button { flex: 1; }
+      .summary-card { min-height: 74px; }
+      .summary-value { font-size: 1.2rem; }
+      .match-info { padding: 15px; }
+      .analysis-panel { padding: 14px 15px; }
+      .top-actions .button-label { display: none; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand" aria-label="Radar de Gols">
+        <div class="brand-mark">G+</div>
+        <div class="brand-name">Radar de <span>Gols</span></div>
+      </div>
+      <div class="top-actions">
+        <div class="connection" title="Estado da API">
+          <span class="connection-dot" id="connectionDot"></span>
+          <span class="connection-label" id="connectionLabel">Não conectado</span>
+        </div>
+        <button class="icon-button" id="settingsButton" type="button" aria-label="Abrir configurações" title="Configurações">⚙</button>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Navegação principal">
+      <button class="tab-button active" type="button" data-route="ao-vivo">Ao vivo</button>
+      <button class="tab-button" type="button" data-route="historico">Validação do modelo</button>
+    </nav>
+  </header>
+
+  <main class="shell">
+    <section class="view" id="liveView" aria-labelledby="liveTitle">
+      <div class="page-head">
+        <div>
+          <h1 id="liveTitle">Jogos ao vivo</h1>
+          <p id="lastUpdated">Configure a API para começar.</p>
+        </div>
+        <div class="page-actions">
+          <button class="button ghost" id="sortButton" type="button" title="Inverter a ordem dos minutos">↓ Mais avançados</button>
+          <button class="button primary" id="refreshButton" type="button">↻ <span class="button-label">Atualizar</span></button>
+        </div>
+      </div>
+
+      <div class="summary-grid" aria-label="Resumo ao vivo">
+        <div class="summary-card"><div class="summary-label">Jogos ao vivo</div><div class="summary-value" id="liveCount">0</div></div>
+        <div class="summary-card"><div class="summary-label">Sinais HT ≥ 65%</div><div class="summary-value green" id="htSignalCount">0</div></div>
+        <div class="summary-card"><div class="summary-label">Sinais FT ≥ 65%</div><div class="summary-value green" id="ftSignalCount">0</div></div>
+        <div class="summary-card"><div class="summary-label">Requisições nesta sessão</div><div class="summary-value" id="requestCount">0</div></div>
+      </div>
+
+      <div class="control-row">
+        <div class="segmented" aria-label="Filtrar jogos">
+          <button class="active" type="button" data-live-filter="all">Todos</button>
+          <button type="button" data-live-filter="targets">Alvos</button>
+          <button type="button" data-live-filter="zero">Somente 0–0</button>
+        </div>
+        <div class="tiny-status" id="queueStatus">Aguardando conexão</div>
+      </div>
+
+      <div class="list" id="liveList" aria-live="polite"></div>
+    </section>
+
+    <section class="view" id="historyView" aria-labelledby="historyTitle" hidden>
+      <div class="page-head">
+        <div>
+          <h1 id="historyTitle">Validação do modelo</h1>
+          <p id="firebaseStatus">Carregando registros…</p>
+        </div>
+        <div class="page-actions">
+          <button class="button ghost" id="settleButton" type="button">↻ Atualizar resultados</button>
+        </div>
+      </div>
+
+      <div class="history-toolbar">
+        <div class="field">
+          <label for="marketFilter">Mercado</label>
+          <select id="marketFilter">
+            <option value="ALL">HT + FT</option>
+            <option value="HT">Over 0.5 HT</option>
+            <option value="FT">Over 0.5 FT após 70′</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="probabilityFilter">Probabilidade atingida</label>
+          <select id="probabilityFilter"></select>
+        </div>
+        <div class="field">
+          <label>Calendário</label>
+          <div class="date-range">
+            <input id="periodStart" type="date" aria-label="Data inicial">
+            <input id="periodEnd" type="date" aria-label="Data final">
+          </div>
+        </div>
+        <div class="field">
+          <label>Atalhos</label>
+          <div class="quick-dates">
+            <button type="button" data-period-quick="today">Hoje</button>
+            <button type="button" data-period-quick="tomorrow">Amanhã</button>
+            <button type="button" data-period-quick="week">7 dias</button>
+            <button type="button" data-period-quick="all">Tudo</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="summary-grid" aria-label="Desempenho do modelo">
+        <div class="summary-card"><div class="summary-label">Jogos no filtro</div><div class="summary-value" id="historyTotal">0</div></div>
+        <div class="summary-card"><div class="summary-label">Acertos</div><div class="summary-value green" id="historyGreen">0</div></div>
+        <div class="summary-card"><div class="summary-label">Erros</div><div class="summary-value red" id="historyRed">0</div></div>
+        <div class="summary-card"><div class="summary-label">Aproveitamento</div><div class="summary-value yellow" id="historyRate">—</div></div>
+      </div>
+
+      <div class="table-wrap" id="historyTableWrap">
+        <table>
+          <thead><tr><th>Jogo</th><th>Mercado</th><th>Entrada</th><th>Máxima</th><th>Amostra</th><th>Resultado</th></tr></thead>
+          <tbody id="historyTableBody"></tbody>
+        </table>
+      </div>
+      <div id="historyEmpty" class="empty-state" hidden>
+        <strong>Nenhum jogo neste filtro</strong>
+        <p>Os registros aparecem quando uma partida 0–0 atinge pelo menos 50% após o minuto de entrada.</p>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="settingsDialog">
+    <form method="dialog" id="settingsForm">
+      <div class="dialog-head">
+        <h2>Configuração</h2>
+        <button class="icon-button" id="closeSettingsButton" type="button" aria-label="Fechar">×</button>
+      </div>
+      <div class="dialog-body">
+        <p>A chave da API já está embutida neste arquivo. Você pode trocar abaixo quando quiser usar outra.</p>
+        <div class="dialog-grid">
+          <div class="field">
+            <label for="apiKeyInput">Chave da API-Football</label>
+            <input id="apiKeyInput" type="password" autocomplete="off" placeholder="Chave já configurada">
+          </div>
+          <div class="field">
+            <label for="refreshInterval">Atualização automática</label>
+            <select id="refreshInterval">
+              <option value="0">Somente manual</option>
+              <option value="1">A cada 1 minuto</option>
+              <option value="2" selected>A cada 2 minutos</option>
+              <option value="5">A cada 5 minutos</option>
+            </select>
+          </div>
+          <label class="check-row">
+            <input id="liveStatsToggle" type="checkbox">
+            <span>Usar estatísticas ao vivo quando disponíveis. Melhora o ajuste, mas consome uma requisição extra por candidato.</span>
+          </label>
+        </div>
+        <p class="security-note">O monitoramento inicia sozinho a cada 2 minutos. Estatísticas ao vivo consomem requisições extras.</p>
+      </div>
+      <div class="dialog-actions">
+        <button class="button ghost" id="removeKeyButton" type="button">Usar chave embutida</button>
+        <button class="button primary" id="saveSettingsButton" value="default" type="submit">Salvar e conectar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+    import {
+      collection,
+      doc,
+      getDocs,
+      getFirestore,
+      limit,
+      orderBy,
+      query,
+      setDoc
+    } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyA4i1hHXXTbx3gL1_lx7IRFVn5x_CJewmE",
+      authDomain: "analise-470a5.firebaseapp.com",
+      projectId: "analise-470a5",
+      storageBucket: "analise-470a5.firebasestorage.app",
+      messagingSenderId: "626170234602",
+      appId: "1:626170234602:web:1ad8ea55b4784167e93993"
+    };
+
+    const API_BASE = "https://v3.football.api-sports.io";
+    const DEFAULT_API_KEY = "a9312d9c7acf6693e0db57632760d68e";
+    const DEFAULT_REFRESH_MINUTES = 2;
+    const FIRESTORE_COLLECTION = "goal_model_evaluations";
+    const MODEL_VERSION = "1.0.0";
+    const THRESHOLDS = Array.from({ length: 11 }, (_, index) => 50 + index * 5);
+    const TARGET_SAMPLE = 10;
+    const HISTORY_LIMIT = 15;
+    const API_GAP_MS = 6500;
+    const CACHE_TTL_MS = 18 * 60 * 60 * 1000;
+    const STATS_CACHE_TTL_MS = 4 * 60 * 1000;
+    const STORAGE = {
+      apiKey: "goal-radar:api-key",
+      interval: "goal-radar:refresh-minutes",
+      liveStats: "goal-radar:live-stats",
+      history: "goal-radar:evaluations",
+      teamPrefix: "goal-radar:team:",
+      statsPrefix: "goal-radar:stats:"
+    };
+
+    const $ = (selector, root = document) => root.querySelector(selector);
+    const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+    const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+    const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
+    const isNumber = value => Number.isFinite(Number(value));
+    const numeric = (value, fallback = 0) => isNumber(value) ? Number(value) : fallback;
+
+    const elements = {
+      connectionDot: $("#connectionDot"),
+      connectionLabel: $("#connectionLabel"),
+      lastUpdated: $("#lastUpdated"),
+      liveCount: $("#liveCount"),
+      htSignalCount: $("#htSignalCount"),
+      ftSignalCount: $("#ftSignalCount"),
+      requestCount: $("#requestCount"),
+      queueStatus: $("#queueStatus"),
+      liveList: $("#liveList"),
+      refreshButton: $("#refreshButton"),
+      sortButton: $("#sortButton"),
+      settingsButton: $("#settingsButton"),
+      settingsDialog: $("#settingsDialog"),
+      settingsForm: $("#settingsForm"),
+      closeSettingsButton: $("#closeSettingsButton"),
+      apiKeyInput: $("#apiKeyInput"),
+      refreshInterval: $("#refreshInterval"),
+      liveStatsToggle: $("#liveStatsToggle"),
+      removeKeyButton: $("#removeKeyButton"),
+      liveView: $("#liveView"),
+      historyView: $("#historyView"),
+      firebaseStatus: $("#firebaseStatus"),
+      marketFilter: $("#marketFilter"),
+      probabilityFilter: $("#probabilityFilter"),
+      periodStart: $("#periodStart"),
+      periodEnd: $("#periodEnd"),
+      historyTotal: $("#historyTotal"),
+      historyGreen: $("#historyGreen"),
+      historyRed: $("#historyRed"),
+      historyRate: $("#historyRate"),
+      historyTableWrap: $("#historyTableWrap"),
+      historyTableBody: $("#historyTableBody"),
+      historyEmpty: $("#historyEmpty"),
+      settleButton: $("#settleButton"),
+      toastStack: $("#toastStack")
+    };
+
+    const state = {
+      apiKey: DEFAULT_API_KEY,
+      refreshMinutes: DEFAULT_REFRESH_MINUTES,
+      useLiveStats: safeStorageGet(STORAGE.liveStats) === "true",
+      liveFixtures: [],
+      analyses: new Map(),
+      analysisLoading: new Set(),
+      historyRecords: new Map(),
+      teamPromises: new Map(),
+      statsPromises: new Map(),
+      sortDescending: true,
+      liveFilter: "all",
+      apiRequests: 0,
+      apiRemaining: null,
+      isRefreshing: false,
+      refreshTimer: null,
+      lastUpdatedAt: null,
+      firebaseReady: false,
+      firebaseMessage: "Banco local ativo",
+      settlementRunning: false
+    };
+
+    let db = null;
+    try {
+      db = getFirestore(initializeApp(firebaseConfig));
+    } catch (error) {
+      state.firebaseMessage = "Firebase não iniciado; usando armazenamento local";
+      console.warn(error);
+    }
+
+    class PriorityRequestQueue {
+      constructor() {
+        this.items = [];
+        this.running = false;
+        this.lastRequestAt = 0;
+      }
+
+      enqueue(path, params = {}, priority = 0) {
+        return new Promise((resolve, reject) => {
+          this.items.push({ path, params, priority, resolve, reject, sequence: Date.now() + Math.random() });
+          this.items.sort((a, b) => b.priority - a.priority || a.sequence - b.sequence);
+          this.updateLabel();
+          this.run();
+        });
+      }
+
+      async run() {
+        if (this.running) return;
+        this.running = true;
+
+        while (this.items.length) {
+          const item = this.items.shift();
+          const waitFor = Math.max(0, this.lastRequestAt + API_GAP_MS - Date.now());
+          if (waitFor) await delay(waitFor);
+
+          try {
+            const result = await rawApiRequest(item.path, item.params);
+            item.resolve(result);
+          } catch (error) {
+            item.reject(error);
+          }
+
+          this.lastRequestAt = Date.now();
+          this.updateLabel();
+        }
+
+        this.running = false;
+        this.updateLabel();
+      }
+
+      updateLabel() {
+        const pending = this.items.length + (this.running ? 1 : 0);
+        elements.queueStatus.textContent = pending
+          ? `${pending} análise${pending === 1 ? "" : "s"} na fila`
+          : state.lastUpdatedAt ? "Análises atualizadas" : "Aguardando atualização";
+      }
+    }
+
+    const apiQueue = new PriorityRequestQueue();
+
+    async function rawApiRequest(path, params = {}) {
+      if (!state.apiKey) throw new Error("Configure sua chave da API-Football.");
+
+      const url = new URL(`${API_BASE}${path}`);
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") url.searchParams.set(key, String(value));
+      });
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 22000);
+
+      setConnection("busy", "Consultando API");
+      state.apiRequests += 1;
+      elements.requestCount.textContent = String(state.apiRequests);
+
+      try {
+        const response = await fetch(url, {
+          method: "GET",
+          headers: { "x-apisports-key": state.apiKey },
+          signal: controller.signal
+        });
+
+        const remaining = response.headers.get("x-ratelimit-requests-remaining");
+        if (remaining !== null) state.apiRemaining = numeric(remaining, null);
+
+        let payload;
+        try {
+          payload = await response.json();
+        } catch {
+          throw new Error(`Resposta inválida da API (${response.status}).`);
+        }
+
+        if (!response.ok) throw new Error(`API-Football respondeu ${response.status}.`);
+
+        const apiErrors = normalizeApiErrors(payload?.errors);
+        if (apiErrors) throw new Error(apiErrors);
+
+        setConnection("ok", state.apiRemaining === null ? "API conectada" : `API conectada • ${state.apiRemaining} restantes`);
+        return Array.isArray(payload?.response) ? payload.response : [];
+      } catch (error) {
+        const message = error.name === "AbortError" ? "A API demorou demais para responder." : error.message;
+        setConnection("error", "Falha na API");
+        throw new Error(message);
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+    function normalizeApiErrors(errors) {
+      if (!errors) return "";
+      if (Array.isArray(errors)) return errors.filter(Boolean).join(" • ");
+      if (typeof errors === "object") return Object.values(errors).filter(Boolean).join(" • ");
+      return String(errors);
+    }
+
+    function setConnection(mode, label) {
+      elements.connectionDot.className = `connection-dot ${mode || ""}`.trim();
+      elements.connectionLabel.textContent = label;
+    }
+
+    function safeStorageGet(key) {
+      try { return localStorage.getItem(key); } catch { return null; }
+    }
+
+    function safeStorageSet(key, value) {
+      try { localStorage.setItem(key, value); return true; } catch { return false; }
+    }
+
+    function safeStorageRemove(key) {
+      try { localStorage.removeItem(key); } catch { /* sem ação */ }
+    }
+
+    function readCache(key, maxAge) {
+      try {
+        const cached = JSON.parse(localStorage.getItem(key));
+        if (!cached || Date.now() - cached.savedAt > maxAge) return null;
+        return cached.value;
+      } catch {
+        return null;
+      }
+    }
+
+    function writeCache(key, value) {
+      safeStorageSet(key, JSON.stringify({ savedAt: Date.now(), value }));
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function toast(message, type = "") {
+      const item = document.createElement("div");
+      item.className = `toast ${type}`.trim();
+      item.textContent = message;
+      elements.toastStack.append(item);
+      setTimeout(() => item.remove(), 4200);
+    }
+
+    function fixtureMinute(fixture) {
+      const status = fixture?.fixture?.status?.short;
+      if (status === "HT") return 45;
+      return numeric(fixture?.fixture?.status?.elapsed, 0);
+    }
+
+    function currentGoals(fixture) {
+      return {
+        home: numeric(fixture?.goals?.home, 0),
+        away: numeric(fixture?.goals?.away, 0)
+      };
+    }
+
+    function halftimeGoals(fixture) {
+      const home = fixture?.score?.halftime?.home;
+      const away = fixture?.score?.halftime?.away;
+      return {
+        home: isNumber(home) ? Number(home) : null,
+        away: isNumber(away) ? Number(away) : null
+      };
+    }
+
+    function totalScore(score) {
+      if (score.home === null || score.away === null) return null;
+      return numeric(score.home) + numeric(score.away);
+    }
+
+    function isSupportedLiveStatus(status) {
+      return ["1H", "HT", "2H", "ET", "BT", "P", "INT", "LIVE"].includes(status);
+    }
+
+    function marketDescriptor(fixture) {
+      const status = fixture?.fixture?.status?.short;
+      const minute = fixtureMinute(fixture);
+      const goals = currentGoals(fixture);
+      const currentTotal = totalScore(goals);
+      const half = halftimeGoals(fixture);
+      const measuredHalfTotal = totalScore(half);
+      const halfTotal = measuredHalfTotal ?? (currentTotal === 0 ? 0 : null);
+      const zeroScore = currentTotal === 0;
+
+      if (status === "1H" || (status === "LIVE" && minute < 45)) {
+        return {
+          market: "HT",
+          eligible: zeroScore && minute >= 20,
+          prefetch: true,
+          minute,
+          reason: zeroScore
+            ? minute >= 20 ? "Jogo 0–0 com janela HT aberta." : "Potencial HT calculado desde o início. Entrada 0–0 após 20′."
+            : "Jogo com gol, mas o potencial HT continua visível."
+        };
+      }
+
+      if (["HT", "2H", "INT", "LIVE", "ET", "BT", "P"].includes(status)) {
+        const analysisMinute = status === "HT" ? 45 : Math.max(minute, 45);
+        const zeroAtHalf = halfTotal === 0 || (halfTotal === null && zeroScore);
+        return {
+          market: "FT",
+          eligible: zeroScore && zeroAtHalf && analysisMinute >= 70,
+          prefetch: true,
+          minute: analysisMinute,
+          reason: zeroScore
+            ? analysisMinute >= 70 && zeroAtHalf ? "Jogo 0–0 com janela FT aberta." : "Potencial do segundo tempo calculado. Entrada 0–0 após 70′."
+            : "Jogo com gol, mas o potencial FT continua visível."
+        };
+      }
+
+      return { market: null, reason: "Partida fora das janelas do modelo." };
+    }
+
+    function analysisKey(fixtureId, market) {
+      return `${fixtureId}:${market}`;
+    }
+
+    async function refreshLive({ quiet = false } = {}) {
+      if (state.isRefreshing) return;
+      if (!state.apiKey) {
+        renderMissingKey();
+        openSettings();
+        return;
+      }
+
+      state.isRefreshing = true;
+      elements.refreshButton.disabled = true;
+      if (!quiet) elements.lastUpdated.textContent = "Atualizando jogos…";
+
+      try {
+        const fixtures = await apiQueue.enqueue("/fixtures", { live: "all", timezone: "America/Sao_Paulo" }, 100);
+        state.liveFixtures = fixtures.filter(item => isSupportedLiveStatus(item?.fixture?.status?.short));
+        state.lastUpdatedAt = Date.now();
+        await settleFromLiveFixtures(state.liveFixtures);
+        renderLive();
+        planAnalyses();
+        settlePendingMissing(false).catch(error => console.warn(error));
+      } catch (error) {
+        elements.lastUpdated.textContent = error.message;
+        toast(error.message, "error");
+        if (!state.liveFixtures.length) renderApiError(error.message);
+      } finally {
+        state.isRefreshing = false;
+        elements.refreshButton.disabled = false;
+        apiQueue.updateLabel();
+      }
+    }
+
+    function planAnalyses() {
+      const candidates = state.liveFixtures
+        .map(fixture => ({ fixture, descriptor: marketDescriptor(fixture) }))
+        .filter(item => item.descriptor.market)
+        .sort((a, b) => Number(b.descriptor.eligible) - Number(a.descriptor.eligible) || b.descriptor.minute - a.descriptor.minute);
+
+      candidates.forEach(({ fixture, descriptor }) => analyzeFixture(fixture, descriptor));
+    }
+
+    async function analyzeFixture(fixture, descriptor) {
+      const fixtureId = fixture.fixture.id;
+      const key = analysisKey(fixtureId, descriptor.market);
+      if (state.analysisLoading.has(key)) return;
+
+      state.analysisLoading.add(key);
+      renderLive();
+
+      try {
+        const homeTeamId = fixture.teams.home.id;
+        const awayTeamId = fixture.teams.away.id;
+        const season = fixture.league.season || new Date().getFullYear();
+        const [homeHistory, awayHistory] = await Promise.all([
+          getTeamHistory(homeTeamId, season),
+          getTeamHistory(awayTeamId, season)
+        ]);
+
+        let liveStats = null;
+        if (state.useLiveStats) {
+          try { liveStats = await getLiveStatistics(fixtureId); } catch (error) { console.warn(error); }
+        }
+
+        const analysis = calculateProbability(fixture, descriptor, homeHistory, awayHistory, liveStats);
+        state.analyses.set(key, analysis);
+
+        if (descriptor.eligible && analysis.available && analysis.probability >= 50) {
+          await recordCandidate(fixture, descriptor, analysis);
+        }
+      } catch (error) {
+        state.analyses.set(key, { available: false, error: error.message, quality: "bad" });
+      } finally {
+        state.analysisLoading.delete(key);
+        renderLive();
+      }
+    }
+
+    async function getTeamHistory(teamId, season) {
+      const historySeason = numeric(season, new Date().getFullYear());
+      const cacheKey = `${STORAGE.teamPrefix}${teamId}:${historySeason}`;
+      const cached = readCache(cacheKey, CACHE_TTL_MS);
+      if (cached) return cached;
+      if (state.teamPromises.has(cacheKey)) return state.teamPromises.get(cacheKey);
+
+      const promise = apiQueue.enqueue("/fixtures", { team: teamId, season: historySeason, status: "FT", timezone: "America/Sao_Paulo" }, 30)
+        .then(fixtures => fixtures.map(normalizeHistoricalFixture).filter(Boolean).sort((a, b) => b.timestamp - a.timestamp))
+        .then(normalized => normalized.slice(0, HISTORY_LIMIT))
+        .then(normalized => {
+          writeCache(cacheKey, normalized);
+          return normalized;
+        })
+        .finally(() => state.teamPromises.delete(cacheKey));
+
+      state.teamPromises.set(cacheKey, promise);
+      return promise;
+    }
+
+    function normalizeHistoricalFixture(item) {
+      const htHome = item?.score?.halftime?.home;
+      const htAway = item?.score?.halftime?.away;
+      const ftHome = item?.score?.fulltime?.home ?? item?.goals?.home;
+      const ftAway = item?.score?.fulltime?.away ?? item?.goals?.away;
+      if (![htHome, htAway, ftHome, ftAway].every(isNumber)) return null;
+
+      return {
+        id: item.fixture.id,
+        timestamp: numeric(item.fixture.timestamp),
+        leagueId: item.league.id,
+        season: item.league.season,
+        homeId: item.teams.home.id,
+        awayId: item.teams.away.id,
+        htHome: Number(htHome),
+        htAway: Number(htAway),
+        ftHome: Number(ftHome),
+        ftAway: Number(ftAway)
+      };
+    }
+
+    async function getLiveStatistics(fixtureId) {
+      const cacheKey = `${STORAGE.statsPrefix}${fixtureId}`;
+      const cached = readCache(cacheKey, STATS_CACHE_TTL_MS);
+      if (cached) return cached;
+      if (state.statsPromises.has(fixtureId)) return state.statsPromises.get(fixtureId);
+
+      const promise = apiQueue.enqueue("/fixtures/statistics", { fixture: fixtureId }, 20)
+        .then(normalizeLiveStatistics)
+        .then(stats => {
+          writeCache(cacheKey, stats);
+          return stats;
+        })
+        .finally(() => state.statsPromises.delete(fixtureId));
+
+      state.statsPromises.set(fixtureId, promise);
+      return promise;
+    }
+
+    function normalizeLiveStatistics(response) {
+      const totals = { shotsOn: 0, shotsTotal: 0, corners: 0, dangerous: 0, attacks: 0 };
+      let coverage = 0;
+
+      response.forEach(team => {
+        const map = Object.fromEntries((team.statistics || []).map(item => [item.type, item.value]));
+        const value = key => numeric(String(map[key] ?? "0").replace("%", ""), 0);
+        totals.shotsOn += value("Shots on Goal");
+        totals.shotsTotal += value("Total Shots");
+        totals.corners += value("Corner Kicks");
+        totals.dangerous += value("Dangerous Attacks");
+        totals.attacks += value("Attacks");
+        if (map["Total Shots"] !== null && map["Total Shots"] !== undefined) coverage += 1;
+      });
+
+      return { ...totals, available: coverage > 0 };
+    }
+
+    function calculateProbability(fixture, descriptor, homeRows, awayRows, liveStats) {
+      const homeTeamId = fixture.teams.home.id;
+      const awayTeamId = fixture.teams.away.id;
+      const leagueId = fixture.league.id;
+      const season = fixture.league.season;
+      const home = teamMetrics(homeRows, homeTeamId, "home", leagueId, season);
+      const away = teamMetrics(awayRows, awayTeamId, "away", leagueId, season);
+
+      const prior = descriptor.market === "HT" ? 0.69 : 0.79;
+      const field = descriptor.market === "HT" ? "overHT" : "overSecondHalf";
+      const scoredField = descriptor.market === "HT" ? "scoredHT" : "scoredSecondHalf";
+      const concededField = descriptor.market === "HT" ? "concededHT" : "concededSecondHalf";
+
+      const homeOverall = bayesianRate(home[field].successes, home[field].n, prior, 5);
+      const awayOverall = bayesianRate(away[field].successes, away[field].n, prior, 5);
+      const homeVenue = bayesianRate(home.venue[field].successes, home.venue[field].n, homeOverall, 4);
+      const awayVenue = bayesianRate(away.venue[field].successes, away.venue[field].n, awayOverall, 4);
+
+      const homeAttack = average([
+        bayesianRate(home[scoredField].successes, home[scoredField].n, prior / 1.45, 5),
+        bayesianRate(away[concededField].successes, away[concededField].n, prior / 1.45, 5)
+      ]);
+      const awayAttack = average([
+        bayesianRate(away[scoredField].successes, away[scoredField].n, prior / 1.45, 5),
+        bayesianRate(home[concededField].successes, home[concededField].n, prior / 1.45, 5)
+      ]);
+
+      const combinedRows = dedupeRows([...homeRows, ...awayRows]);
+      const environmentMetric = countMetric(combinedRows, row => descriptor.market === "HT"
+        ? row.htHome + row.htAway > 0
+        : row.ftHome + row.ftAway - row.htHome - row.htAway > 0);
+      const environment = bayesianRate(environmentMetric.successes, environmentMetric.n, prior, 6);
+
+      const h2hRows = combinedRows.filter(row =>
+        [row.homeId, row.awayId].includes(homeTeamId) && [row.homeId, row.awayId].includes(awayTeamId)
+      );
+      const h2hMetric = countMetric(h2hRows, row => descriptor.market === "HT"
+        ? row.htHome + row.htAway > 0
+        : row.ftHome + row.ftAway - row.htHome - row.htAway > 0);
+      const h2h = bayesianRate(h2hMetric.successes, h2hMetric.n, environment, 5);
+
+      let fullWindowProbability =
+        homeVenue * 0.22 +
+        awayVenue * 0.22 +
+        homeOverall * 0.14 +
+        awayOverall * 0.14 +
+        homeAttack * 0.10 +
+        awayAttack * 0.10 +
+        environment * 0.05 +
+        h2h * 0.03;
+
+      const baseReliability = clamp(Math.min(home.n, away.n) / TARGET_SAMPLE, 0.5, 1);
+      fullWindowProbability = prior + (fullWindowProbability - prior) * baseReliability;
+
+      const endMinute = descriptor.market === "HT" ? 47 : 96;
+      const startMinute = descriptor.market === "HT" ? 0 : 45;
+      const remainingFraction = clamp((endMinute - descriptor.minute) / (endMinute - startMinute), 0.015, 1);
+      let remainingProbability = 1 - Math.pow(1 - clamp(fullWindowProbability, .05, .97), remainingFraction);
+
+      const pressure = livePressure(liveStats, descriptor.minute);
+      if (pressure !== null) {
+        const logOdds = Math.log(remainingProbability / (1 - remainingProbability));
+        remainingProbability = 1 / (1 + Math.exp(-(logOdds + (pressure - 1) * 0.92)));
+      }
+
+      const earlySeason = Math.min(home.sameCompetition, away.sameCompetition) < 3;
+      const lowSample = Math.min(home.n, away.n) < TARGET_SAMPLE;
+      const quality = earlySeason || lowSample ? "low" : "good";
+      const probability = Math.round(clamp(remainingProbability * 100, 5, 96));
+
+      return {
+        available: true,
+        probability,
+        preMatchWindowProbability: Math.round(fullWindowProbability * 100),
+        quality,
+        earlySeason,
+        liveStatsUsed: pressure !== null,
+        pressure,
+        sampleHome: home.n,
+        sampleAway: away.n,
+        venueHome: home.venue.n,
+        venueAway: away.venue.n,
+        sameCompetitionHome: home.sameCompetition,
+        sameCompetitionAway: away.sameCompetition,
+        h2hCount: h2hRows.length
+      };
+    }
+
+    function teamMetrics(rows, teamId, venue, leagueId, season) {
+      const validRows = rows.filter(row => row.homeId === teamId || row.awayId === teamId).slice(0, 15);
+      const venueRows = validRows.filter(row => venue === "home" ? row.homeId === teamId : row.awayId === teamId);
+      const metricsFor = source => ({
+        n: source.length,
+        overHT: countMetric(source, row => row.htHome + row.htAway > 0),
+        overSecondHalf: countMetric(source, row => row.ftHome + row.ftAway - row.htHome - row.htAway > 0),
+        scoredHT: countMetric(source, row => teamGoals(row, teamId, "HT") > 0),
+        concededHT: countMetric(source, row => opponentGoals(row, teamId, "HT") > 0),
+        scoredSecondHalf: countMetric(source, row => teamGoals(row, teamId, "2H") > 0),
+        concededSecondHalf: countMetric(source, row => opponentGoals(row, teamId, "2H") > 0)
+      });
+      const overall = metricsFor(validRows);
+      return {
+        ...overall,
+        sameCompetition: validRows.filter(row => row.leagueId === leagueId && String(row.season) === String(season)).length,
+        venue: metricsFor(venueRows)
+      };
+    }
+
+    function teamGoals(row, teamId, period) {
+      const isHome = row.homeId === teamId;
+      if (period === "HT") return isHome ? row.htHome : row.htAway;
+      return isHome ? row.ftHome - row.htHome : row.ftAway - row.htAway;
+    }
+
+    function opponentGoals(row, teamId, period) {
+      const isHome = row.homeId === teamId;
+      if (period === "HT") return isHome ? row.htAway : row.htHome;
+      return isHome ? row.ftAway - row.htAway : row.ftHome - row.htHome;
+    }
+
+    function countMetric(rows, predicate) {
+      return { successes: rows.filter(predicate).length, n: rows.length };
+    }
+
+    function bayesianRate(successes, count, prior, priorWeight) {
+      return (numeric(successes) + prior * priorWeight) / (numeric(count) + priorWeight);
+    }
+
+    function average(values) {
+      return values.reduce((sum, value) => sum + value, 0) / Math.max(values.length, 1);
+    }
+
+    function dedupeRows(rows) {
+      return [...new Map(rows.map(row => [row.id, row])).values()];
+    }
+
+    function livePressure(stats, minute) {
+      if (!stats?.available || minute < 5) return null;
+      const expectedShots = Math.max(2, minute * .205);
+      const expectedOnTarget = Math.max(.8, minute * .073);
+      const expectedCorners = Math.max(.7, minute * .092);
+      const components = [
+        clamp(stats.shotsOn / expectedOnTarget, 0, 2.2) * .46,
+        clamp(stats.shotsTotal / expectedShots, 0, 2.2) * .32,
+        clamp(stats.corners / expectedCorners, 0, 2.2) * .16
+      ];
+      if (stats.dangerous > 0) {
+        const expectedDangerous = Math.max(7, minute * .82);
+        components.push(clamp(stats.dangerous / expectedDangerous, 0, 2.2) * .06);
+      } else {
+        components[0] += .03;
+        components[1] += .03;
+      }
+      return clamp(components.reduce((sum, value) => sum + value, 0), .35, 1.95);
+    }
+
+    async function recordCandidate(fixture, descriptor, analysis) {
+      const id = `${fixture.fixture.id}_${descriptor.market}`;
+      const existing = state.historyRecords.get(id);
+      const crossedNow = THRESHOLDS.filter(threshold => analysis.probability >= threshold);
+      const previousThresholds = existing?.qualifiedThresholds || [];
+      const combinedThresholds = [...new Set([...previousThresholds, ...crossedNow])].sort((a, b) => a - b);
+      const thresholdCrossings = { ...(existing?.thresholdCrossings || {}) };
+      crossedNow.forEach(threshold => {
+        if (!thresholdCrossings[String(threshold)]) {
+          thresholdCrossings[String(threshold)] = {
+            minute: descriptor.minute,
+            probability: analysis.probability,
+            atMs: Date.now()
+          };
+        }
+      });
+      const changed = !existing || combinedThresholds.length > previousThresholds.length || analysis.probability > (existing?.maxProbability || 0);
+      if (!changed) return;
+
+      const goals = currentGoals(fixture);
+      const record = {
+        id,
+        fixtureId: fixture.fixture.id,
+        market: descriptor.market,
+        homeTeam: fixture.teams.home.name,
+        awayTeam: fixture.teams.away.name,
+        league: fixture.league.name,
+        country: fixture.league.country || "",
+        entryAtMs: existing?.entryAtMs || Date.now(),
+        entryMinute: existing?.entryMinute ?? descriptor.minute,
+        entryProbability: existing?.entryProbability ?? analysis.probability,
+        maxProbability: Math.max(existing?.maxProbability || 0, analysis.probability),
+        qualifiedThresholds: combinedThresholds,
+        thresholdCrossings,
+        sampleQuality: existing?.sampleQuality === "good" ? "good" : analysis.quality,
+        sampleHome: analysis.sampleHome,
+        sampleAway: analysis.sampleAway,
+        sameCompetitionHome: analysis.sameCompetitionHome,
+        sameCompetitionAway: analysis.sameCompetitionAway,
+        liveStatsUsed: Boolean(analysis.liveStatsUsed),
+        entryScore: `${goals.home}-${goals.away}`,
+        status: existing?.status || "pending",
+        modelVersion: MODEL_VERSION,
+        lastSeenAtMs: Date.now(),
+        firebaseSynced: false
+      };
+
+      state.historyRecords.set(id, record);
+      persistLocalRecords();
+      renderHistory();
+      await syncRecord(record);
+    }
+
+    async function syncRecord(record) {
+      if (!db) return;
+      try {
+        const remoteRecord = { ...record };
+        delete remoteRecord.firebaseSynced;
+        await setDoc(doc(db, FIRESTORE_COLLECTION, record.id), cleanForFirestore(remoteRecord), { merge: true });
+        record.firebaseSynced = true;
+        state.firebaseReady = true;
+        state.firebaseMessage = "Firebase sincronizado";
+        persistLocalRecords();
+        updateFirebaseStatus();
+      } catch (error) {
+        record.firebaseSynced = false;
+        state.firebaseReady = false;
+        state.firebaseMessage = "Firebase indisponível; dados preservados neste navegador";
+        persistLocalRecords();
+        updateFirebaseStatus();
+        console.warn(error);
+      }
+    }
+
+    function cleanForFirestore(value) {
+      if (Array.isArray(value)) return value.map(cleanForFirestore);
+      if (value && typeof value === "object") {
+        return Object.fromEntries(Object.entries(value)
+          .filter(([, item]) => item !== undefined)
+          .map(([key, item]) => [key, cleanForFirestore(item)]));
+      }
+      return value;
+    }
+
+    function persistLocalRecords() {
+      const records = [...state.historyRecords.values()]
+        .sort((a, b) => b.entryAtMs - a.entryAtMs)
+        .slice(0, 4000);
+      safeStorageSet(STORAGE.history, JSON.stringify(records));
+    }
+
+    function loadLocalRecords() {
+      try {
+        const records = JSON.parse(safeStorageGet(STORAGE.history) || "[]");
+        records.forEach(record => state.historyRecords.set(record.id, record));
+      } catch { /* inicia vazio */ }
+    }
+
+    async function loadRemoteRecords() {
+      if (!db) {
+        updateFirebaseStatus();
+        return;
+      }
+      try {
+        const recordsQuery = query(collection(db, FIRESTORE_COLLECTION), orderBy("entryAtMs", "desc"), limit(3000));
+        const snapshot = await getDocs(recordsQuery);
+        snapshot.forEach(snapshotDocument => {
+          const remote = { ...snapshotDocument.data(), id: snapshotDocument.id, firebaseSynced: true };
+          const local = state.historyRecords.get(remote.id);
+          state.historyRecords.set(remote.id, mergeRecords(local, remote));
+        });
+        state.firebaseReady = true;
+        state.firebaseMessage = "Firebase sincronizado";
+        persistLocalRecords();
+      } catch (error) {
+        state.firebaseReady = false;
+        state.firebaseMessage = "Firebase indisponível; mostrando dados deste navegador";
+        console.warn(error);
+      }
+      updateFirebaseStatus();
+      renderHistory();
+    }
+
+    function mergeRecords(local, remote) {
+      if (!local) return remote;
+      const status = remote.status !== "pending" ? remote.status : local.status;
+      return {
+        ...local,
+        ...remote,
+        status,
+        maxProbability: Math.max(local.maxProbability || 0, remote.maxProbability || 0),
+        qualifiedThresholds: [...new Set([...(local.qualifiedThresholds || []), ...(remote.qualifiedThresholds || [])])].sort((a, b) => a - b),
+        thresholdCrossings: { ...(local.thresholdCrossings || {}), ...(remote.thresholdCrossings || {}) },
+        firebaseSynced: remote.firebaseSynced
+      };
+    }
+
+    async function settleFromLiveFixtures(fixtures) {
+      const byId = new Map(fixtures.map(fixture => [fixture.fixture.id, fixture]));
+      const updates = [];
+      state.historyRecords.forEach(record => {
+        if (record.status !== "pending") return;
+        const fixture = byId.get(record.fixtureId);
+        if (fixture) updates.push(settleRecordFromFixture(record, fixture));
+      });
+      await Promise.all(updates);
+    }
+
+    async function settleRecordFromFixture(record, fixture) {
+      const status = fixture?.fixture?.status?.short;
+      let outcome = null;
+
+      if (record.market === "HT") {
+        const half = halftimeGoals(fixture);
+        const halfTotal = totalScore(half);
+        const currentTotal = totalScore(currentGoals(fixture));
+        if (status === "1H" && currentTotal > 0) outcome = "green";
+        else if (halfTotal !== null && ["HT", "2H", "FT", "AET", "PEN", "ET", "BT"].includes(status)) outcome = halfTotal > 0 ? "green" : "red";
+      } else {
+        const currentTotal = totalScore(currentGoals(fixture));
+        const regulation = {
+          home: fixture?.score?.fulltime?.home,
+          away: fixture?.score?.fulltime?.away
+        };
+        const regulationTotal = totalScore(regulation);
+        if (status === "2H" && currentTotal > 0) outcome = "green";
+        else if (["FT", "AET", "PEN", "ET", "BT"].includes(status) && regulationTotal !== null) outcome = regulationTotal > 0 ? "green" : "red";
+      }
+
+      if (!outcome || outcome === record.status) return;
+      record.status = outcome;
+      record.resultAtMs = Date.now();
+      record.finalScore = formatFixtureScore(fixture);
+      record.firebaseSynced = false;
+      state.historyRecords.set(record.id, record);
+      persistLocalRecords();
+      renderHistory();
+      await syncRecord(record);
+    }
+
+    async function settlePendingMissing(forceAll = false) {
+      if (state.settlementRunning || !state.apiKey) return;
+      const liveIds = new Set(state.liveFixtures.map(fixture => fixture.fixture.id));
+      const now = Date.now();
+      const pendingIds = [...new Set([...state.historyRecords.values()]
+        .filter(record => record.status === "pending" && !liveIds.has(record.fixtureId))
+        .filter(record => now - record.entryAtMs > (record.market === "HT" ? 25 : 35) * 60 * 1000)
+        .map(record => record.fixtureId))];
+
+      if (!pendingIds.length) return;
+      state.settlementRunning = true;
+      elements.settleButton.disabled = true;
+
+      try {
+        const groups = chunk(pendingIds, 20);
+        const groupsToRun = forceAll ? groups : groups.slice(0, 1);
+        for (const group of groupsToRun) {
+          const fixtures = await apiQueue.enqueue("/fixtures", { ids: group.join("-") }, 80);
+          for (const fixture of fixtures) {
+            const records = [...state.historyRecords.values()].filter(record => record.fixtureId === fixture.fixture.id && record.status === "pending");
+            for (const record of records) await settleRecordFromFixture(record, fixture);
+          }
+        }
+      } finally {
+        state.settlementRunning = false;
+        elements.settleButton.disabled = false;
+      }
+    }
+
+    function chunk(array, size) {
+      const chunks = [];
+      for (let index = 0; index < array.length; index += size) chunks.push(array.slice(index, index + size));
+      return chunks;
+    }
+
+    function formatFixtureScore(fixture) {
+      const regulationHome = fixture?.score?.fulltime?.home;
+      const regulationAway = fixture?.score?.fulltime?.away;
+      const home = isNumber(regulationHome) ? regulationHome : fixture?.goals?.home;
+      const away = isNumber(regulationAway) ? regulationAway : fixture?.goals?.away;
+      return isNumber(home) && isNumber(away) ? `${home}-${away}` : "—";
+    }
+
+    function renderLive() {
+      const fixtures = [...state.liveFixtures].sort((a, b) => {
+        const difference = fixtureMinute(a) - fixtureMinute(b);
+        return state.sortDescending ? -difference : difference;
+      });
+
+      const filtered = fixtures.filter(fixture => {
+        if (state.liveFilter === "zero") return totalScore(currentGoals(fixture)) === 0;
+        if (state.liveFilter === "targets") {
+          const descriptor = marketDescriptor(fixture);
+          return descriptor.eligible;
+        }
+        return true;
+      });
+
+      elements.liveCount.textContent = String(fixtures.length);
+      const currentAnalysisKeys = new Set(fixtures
+        .map(fixture => ({ fixture, descriptor: marketDescriptor(fixture) }))
+        .filter(item => item.descriptor.market)
+        .map(item => analysisKey(item.fixture.fixture.id, item.descriptor.market)));
+      const validAnalyses = [...state.analyses.entries()].filter(([key, analysis]) => currentAnalysisKeys.has(key) && analysis.available && analysis.probability >= 65);
+      elements.htSignalCount.textContent = String(validAnalyses.filter(([key]) => key.endsWith(":HT")).length);
+      elements.ftSignalCount.textContent = String(validAnalyses.filter(([key]) => key.endsWith(":FT")).length);
+      elements.lastUpdated.textContent = state.lastUpdatedAt
+        ? `Atualizado ${formatClock(state.lastUpdatedAt)}${state.apiRemaining === null ? "" : ` • ${state.apiRemaining} requisições restantes`}`
+        : "Ainda não atualizado.";
+
+      if (!filtered.length) {
+        elements.liveList.innerHTML = `
+          <div class="empty-state">
+            <strong>${fixtures.length ? "Nenhum jogo neste filtro" : "Nenhum jogo ao vivo agora"}</strong>
+            <p>${fixtures.length ? "Troque o filtro para visualizar as outras partidas." : "A lista será preenchida automaticamente na próxima atualização."}</p>
+          </div>`;
+        return;
+      }
+
+      elements.liveList.innerHTML = filtered.map(renderMatchCard).join("");
+    }
+
+    function renderMatchCard(fixture) {
+      const fixtureId = fixture.fixture.id;
+      const descriptor = marketDescriptor(fixture);
+      const key = descriptor.market ? analysisKey(fixtureId, descriptor.market) : null;
+      const analysis = key ? state.analyses.get(key) : null;
+      const loading = key ? state.analysisLoading.has(key) : false;
+      const goals = currentGoals(fixture);
+      const minute = fixtureMinute(fixture);
+      const status = fixture.fixture.status.short;
+      const minuteLabel = status === "HT" ? "Intervalo" : `${minute}′`;
+      const actionable = descriptor.eligible && analysis?.available && analysis.probability >= 65;
+
+      return `
+        <article class="match-card ${actionable ? "actionable" : ""}">
+          <div class="match-info">
+            <div class="match-meta">
+              <span class="minute"><span class="live-dot"></span>${escapeHtml(minuteLabel)}</span>
+              <span class="meta-separator">•</span>
+              <span class="league">${escapeHtml([fixture.league.country, fixture.league.name].filter(Boolean).join(" — "))}</span>
+            </div>
+            <div class="scoreboard">
+              ${renderTeamRow(fixture.teams.home, goals.home)}
+              ${renderTeamRow(fixture.teams.away, goals.away)}
+            </div>
+          </div>
+          <div class="analysis-panel">
+            ${renderAnalysisPanel(descriptor, analysis, loading)}
+          </div>
+        </article>`;
+    }
+
+    function renderTeamRow(team, score) {
+      const logo = team.logo
+        ? `<img class="team-logo" src="${escapeHtml(team.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer">`
+        : `<span class="team-logo-fallback">${escapeHtml((team.name || "?").slice(0, 1))}</span>`;
+      return `<div class="team-row">${logo}<span class="team-name">${escapeHtml(team.name)}</span><strong class="team-score">${escapeHtml(score)}</strong></div>`;
+    }
+
+    function renderAnalysisPanel(descriptor, analysis, loading) {
+      const marketLabel = descriptor.market === "HT" ? "Over 0.5 HT • gol até o intervalo" : descriptor.market === "FT" ? "Over 0.5 FT • gol no segundo tempo" : "Análise";
+
+      if (!descriptor.market) {
+        return `<div class="analysis-top"><div><div class="market-label">Fora do modelo</div><div class="probability unavailable">—</div></div><span class="signal red">Sem entrada</span></div><div class="analysis-note">${escapeHtml(descriptor.reason)}</div>`;
+      }
+
+      if (!descriptor.prefetch) {
+        return `<div class="analysis-top"><div><div class="market-label">${marketLabel}</div><div class="probability unavailable">—</div></div><span class="signal blue">Aguardando</span></div><div class="analysis-note">${escapeHtml(descriptor.reason)}</div>`;
+      }
+
+      if (loading && !analysis) {
+        return `<div class="market-label">${marketLabel}</div><div class="skeleton big"></div><div class="skeleton line"></div>`;
+      }
+
+      if (!analysis?.available) {
+        const message = analysis?.error || "Preparando análise…";
+        const sample = analysis?.sampleHome !== undefined ? `<div class="quality-line"><span class="quality-dot bad"></span>Base ${analysis.sampleHome}/${analysis.sampleAway} jogos</div>` : "";
+        return `<div class="analysis-top"><div><div class="market-label">${marketLabel}</div><div class="probability unavailable">—</div></div><span class="signal red">Sem indicação</span></div><div class="analysis-note">${escapeHtml(message)}</div>${sample}`;
+      }
+
+      const probabilityClass = analysis.probability >= 80 ? "strong" : analysis.probability >= 65 ? "valid" : analysis.probability >= 50 ? "watch" : "weak";
+      const signal = !descriptor.eligible
+        ? { label: "Leitura", className: "blue" }
+        : analysis.probability >= 65
+          ? { label: "Sinal válido", className: "green" }
+          : analysis.probability >= 50
+            ? { label: "Observação", className: "yellow" }
+            : { label: "Fora do corte", className: "red" };
+      const qualityClass = analysis.quality === "low" ? "low" : "";
+      const qualityText = analysis.quality === "low"
+        ? `${analysis.earlySeason ? "Início de temporada" : "Amostra baixa"} • base ${analysis.sampleHome}/${analysis.sampleAway}`
+        : `Base ${analysis.sampleHome}/${analysis.sampleAway} • liga atual ${analysis.sameCompetitionHome}/${analysis.sameCompetitionAway}`;
+      const liveText = analysis.liveStatsUsed ? " • pressão ao vivo incluída" : " • somente histórico";
+
+      return `
+        <div class="analysis-top">
+          <div><div class="market-label">${marketLabel}</div><div class="probability ${probabilityClass}">${analysis.probability}%</div></div>
+          <span class="signal ${signal.className}">${signal.label}</span>
+        </div>
+        <div class="analysis-note">${escapeHtml(descriptor.reason)}${escapeHtml(liveText)}</div>
+        <div class="quality-line"><span class="quality-dot ${qualityClass}"></span>${escapeHtml(qualityText)}</div>`;
+    }
+
+    function renderMissingKey() {
+      setConnection("", "Não conectado");
+      elements.liveCount.textContent = "0";
+      elements.htSignalCount.textContent = "0";
+      elements.ftSignalCount.textContent = "0";
+      elements.liveList.innerHTML = `
+        <div class="empty-state">
+          <strong>Conecte a API-Football</strong>
+          <p>A chave embutida não foi carregada. Abra as configurações para revisar.</p>
+          <button class="button primary" id="emptyConfigureButton" type="button">Configurar API</button>
+        </div>`;
+      $("#emptyConfigureButton")?.addEventListener("click", openSettings);
+    }
+
+    function renderApiError(message) {
+      elements.liveList.innerHTML = `<div class="empty-state"><strong>Não foi possível carregar os jogos</strong><p>${escapeHtml(message)}</p><button class="button primary" id="retryButton" type="button">Tentar novamente</button></div>`;
+      $("#retryButton")?.addEventListener("click", () => refreshLive());
+    }
+
+    function renderHistory() {
+      const market = elements.marketFilter.value;
+      const threshold = numeric(elements.probabilityFilter.value, 50);
+      const [startDate, endDate] = normalizedDateRange(elements.periodStart.value, elements.periodEnd.value);
+      const records = [...state.historyRecords.values()]
+        .filter(record => market === "ALL" || record.market === market)
+        .filter(record => (record.qualifiedThresholds || []).includes(threshold))
+        .filter(record => recordMatchesDateRange(record, startDate, endDate))
+        .sort((a, b) => b.entryAtMs - a.entryAtMs);
+
+      const greens = records.filter(record => record.status === "green").length;
+      const reds = records.filter(record => record.status === "red").length;
+      const decided = greens + reds;
+      elements.historyTotal.textContent = String(records.length);
+      elements.historyGreen.textContent = String(greens);
+      elements.historyRed.textContent = String(reds);
+      elements.historyRate.textContent = decided ? `${Math.round(greens / decided * 100)}%` : "—";
+      elements.historyEmpty.hidden = records.length > 0;
+      elements.historyTableWrap.hidden = records.length === 0;
+      elements.historyTableBody.innerHTML = records.map(record => renderHistoryRow(record, threshold)).join("");
+      updateFirebaseStatus();
+    }
+
+    function renderHistoryRow(record, selectedThreshold) {
+      const resultLabel = record.status === "green" ? "Acerto" : record.status === "red" ? "Erro" : "Pendente";
+      const qualityLabel = record.sampleQuality === "low" ? "Baixa" : "Confiável";
+      const crossing = record.thresholdCrossings?.[String(selectedThreshold)];
+      const crossingMinute = crossing?.minute ?? record.entryMinute;
+      const crossingProbability = crossing?.probability ?? record.entryProbability;
+      return `
+        <tr>
+          <td data-label="Jogo"><div class="history-game"><strong>${escapeHtml(record.homeTeam)} × ${escapeHtml(record.awayTeam)}</strong><span>${escapeHtml(formatDateTime(record.entryAtMs))} • ${escapeHtml(record.league || "")}</span></div></td>
+          <td data-label="Mercado">${record.market === "HT" ? "Over 0.5 HT" : "Over 0.5 FT"}</td>
+          <td data-label="Entrada">${escapeHtml(crossingMinute)}′ • ${escapeHtml(crossingProbability)}%</td>
+          <td data-label="Máxima"><strong>${escapeHtml(record.maxProbability)}%</strong></td>
+          <td data-label="Amostra"><span class="confidence ${record.sampleQuality === "low" ? "low" : ""}">${qualityLabel}<br>${escapeHtml(record.sampleHome)}/${escapeHtml(record.sampleAway)} jogos</span></td>
+          <td data-label="Resultado"><span class="result-badge ${record.status}">${resultLabel}</span>${record.finalScore ? `<div class="confidence">${escapeHtml(record.finalScore)}</div>` : ""}</td>
+        </tr>`;
+    }
+
+    function normalizedDateRange(startDate, endDate) {
+      if (startDate && endDate && startDate > endDate) return [endDate, startDate];
+      return [startDate, endDate];
+    }
+
+    function recordMatchesDateRange(record, startDate, endDate) {
+      if (!startDate && !endDate) return true;
+      const recordDate = saoPauloDateKey(record.entryAtMs);
+      if (startDate && recordDate < startDate) return false;
+      if (endDate && recordDate > endDate) return false;
+      return true;
+    }
+
+    function saoPauloDateKey(timestamp) {
+      return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(timestamp);
+    }
+
+    function formatClock(timestamp) {
+      return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(timestamp);
+    }
+
+    function formatDateTime(timestamp) {
+      return new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" }).format(timestamp);
+    }
+
+    function updateFirebaseStatus() {
+      const pendingLocal = [...state.historyRecords.values()].filter(record => !record.firebaseSynced).length;
+      const localLabel = pendingLocal === 1 ? "1 registro local" : `${pendingLocal} registros locais`;
+      elements.firebaseStatus.textContent = `${state.firebaseMessage}${pendingLocal ? ` • ${localLabel}` : ""}`;
+    }
+
+    function openSettings() {
+      elements.apiKeyInput.value = state.apiKey;
+      elements.refreshInterval.value = String(state.refreshMinutes);
+      elements.liveStatsToggle.checked = state.useLiveStats;
+      if (!elements.settingsDialog.open) elements.settingsDialog.showModal();
+    }
+
+    function saveSettings(event) {
+      event.preventDefault();
+      const apiKey = elements.apiKeyInput.value.trim();
+      if (!apiKey) {
+        toast("Informe a chave da API-Football.", "error");
+        return;
+      }
+      state.apiKey = apiKey;
+      state.refreshMinutes = numeric(elements.refreshInterval.value, DEFAULT_REFRESH_MINUTES);
+      state.useLiveStats = elements.liveStatsToggle.checked;
+      safeStorageSet(STORAGE.apiKey, apiKey);
+      safeStorageSet(STORAGE.interval, String(state.refreshMinutes));
+      safeStorageSet(STORAGE.liveStats, String(state.useLiveStats));
+      elements.settingsDialog.close();
+      configureAutoRefresh();
+      toast("Configuração salva.", "success");
+      refreshLive();
+    }
+
+    function removeApiKey() {
+      state.apiKey = DEFAULT_API_KEY;
+      elements.apiKeyInput.value = DEFAULT_API_KEY;
+      safeStorageRemove(STORAGE.apiKey);
+      configureAutoRefresh();
+      toast("Chave embutida em uso.", "success");
+      refreshLive();
+    }
+
+    function configureAutoRefresh() {
+      if (state.refreshTimer) clearInterval(state.refreshTimer);
+      state.refreshTimer = null;
+      if (!state.apiKey || state.refreshMinutes <= 0) return;
+      state.refreshTimer = setInterval(() => {
+        if (document.visibilityState === "visible") refreshLive({ quiet: true });
+      }, state.refreshMinutes * 60 * 1000);
+    }
+
+    function switchRoute(route) {
+      const history = route === "historico";
+      elements.liveView.hidden = history;
+      elements.historyView.hidden = !history;
+      $$(".tab-button").forEach(button => button.classList.toggle("active", button.dataset.route === route));
+      if (location.hash !== `#${route}`) history ? window.history.replaceState(null, "", "#historico") : window.history.replaceState(null, "", "#ao-vivo");
+      if (history) renderHistory();
+    }
+
+    function initializeFilters() {
+      elements.probabilityFilter.innerHTML = THRESHOLDS.map(threshold => `<option value="${threshold}">≥ ${threshold}%</option>`).join("");
+      elements.probabilityFilter.value = "50";
+      const today = saoPauloDateKey(Date.now());
+      elements.periodStart.value = today;
+      elements.periodEnd.value = today;
+    }
+
+    function dateKeyFromToday(offsetDays = 0) {
+      return saoPauloDateKey(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+    }
+
+    function setHistoryDateRange(startDate, endDate = startDate) {
+      elements.periodStart.value = startDate;
+      elements.periodEnd.value = endDate;
+      renderHistory();
+    }
+
+    function applyDateShortcut(shortcut) {
+      const today = dateKeyFromToday();
+      if (shortcut === "today") return setHistoryDateRange(today);
+      if (shortcut === "tomorrow") return setHistoryDateRange(dateKeyFromToday(1));
+      if (shortcut === "week") return setHistoryDateRange(dateKeyFromToday(-6), today);
+      setHistoryDateRange("", "");
+    }
+
+    function initializeEvents() {
+      elements.refreshButton.addEventListener("click", () => refreshLive());
+      elements.settingsButton.addEventListener("click", openSettings);
+      elements.closeSettingsButton.addEventListener("click", () => elements.settingsDialog.close());
+      elements.settingsForm.addEventListener("submit", saveSettings);
+      elements.removeKeyButton.addEventListener("click", removeApiKey);
+      elements.sortButton.addEventListener("click", () => {
+        state.sortDescending = !state.sortDescending;
+        elements.sortButton.textContent = state.sortDescending ? "↓ Mais avançados" : "↑ Início primeiro";
+        renderLive();
+      });
+      $$("[data-live-filter]").forEach(button => button.addEventListener("click", () => {
+        state.liveFilter = button.dataset.liveFilter;
+        $$("[data-live-filter]").forEach(item => item.classList.toggle("active", item === button));
+        renderLive();
+      }));
+      $$(".tab-button").forEach(button => button.addEventListener("click", () => switchRoute(button.dataset.route)));
+      [elements.marketFilter, elements.probabilityFilter, elements.periodStart, elements.periodEnd].forEach(control => control.addEventListener("change", renderHistory));
+      $$("[data-period-quick]").forEach(button => button.addEventListener("click", () => applyDateShortcut(button.dataset.periodQuick)));
+      elements.settleButton.addEventListener("click", async () => {
+        if (!state.apiKey) return openSettings();
+        try {
+          await settlePendingMissing(true);
+          await loadRemoteRecords();
+          toast("Resultados atualizados.", "success");
+        } catch (error) {
+          toast(error.message, "error");
+        }
+      });
+      window.addEventListener("hashchange", () => switchRoute(location.hash === "#historico" ? "historico" : "ao-vivo"));
+      window.addEventListener("online", () => state.apiKey && refreshLive({ quiet: true }));
+    }
+
+    async function init() {
+      initializeFilters();
+      initializeEvents();
+      loadLocalRecords();
+      renderHistory();
+      switchRoute(location.hash === "#historico" ? "historico" : "ao-vivo");
+      elements.refreshInterval.value = String(state.refreshMinutes);
+      elements.liveStatsToggle.checked = state.useLiveStats;
+      safeStorageSet(STORAGE.apiKey, DEFAULT_API_KEY);
+      safeStorageSet(STORAGE.interval, String(DEFAULT_REFRESH_MINUTES));
+      configureAutoRefresh();
+      loadRemoteRecords();
+
+      if (state.apiKey) {
+        refreshLive();
+      } else {
+        renderMissingKey();
+        setTimeout(openSettings, 250);
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
